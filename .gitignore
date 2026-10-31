@@ -30,3 +30,10 @@ __pycache__/
 .ipynb_checkpoints/
 *.sqlite
 *.sqlite3
+
+venv/
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
+alembic/versions/__pycache__/
