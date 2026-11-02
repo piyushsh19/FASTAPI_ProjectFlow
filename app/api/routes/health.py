@@ -1,6 +1,9 @@
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+from app.db.dependencies import get_db
 
 router = APIRouter()
 
@@ -11,6 +14,7 @@ def health_check():
         "status": "healthy",
         "service": "projectflow-api",
     }
+
 
 @router.get("/health/db", tags=["Health"])
 def database_health(db: Session = Depends(get_db)):
