@@ -21,6 +21,7 @@ def get_project(db: Session, project_id: int) -> Project | None:
 def get_projects(db: Session, skip: int = 0, limit: int = 20):
     statement = (
         select(Project)
+        .where(Project.owner_id == owner_id)
         .order_by(Project.created_at.desc())
         .offset(skip)
         .limit(limit)

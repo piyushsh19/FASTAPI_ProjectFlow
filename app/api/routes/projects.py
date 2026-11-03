@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_user
 from app.db.dependencies import get_db
+from app.models import User
 from app.schemas.project import (
     ProjectCreate,
     ProjectUpdate,
@@ -23,11 +25,12 @@ router = APIRouter(
 def create_project(
     project: ProjectCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    return project_service.create_project(
-        db,
-        project.model_dump(),
-    )
+    project_data = project.model_dump()
+    project_data["owner_id"] = current_user.id
+
+    return project_service.create_project(db, project_data)
 
 
 @router.get("/", response_model=list[ProjectResponse])
@@ -35,16 +38,27 @@ def get_projects(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    return project_service.get_projects(db, skip, limit)
+    return project_service.get_projects(
+        db,
+        skip,
+        limit,
+        current_user.id,
+    )
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 def get_project(
     project_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    return project_service.get_project(db, project_id)
+    return project_service.get_project(
+        db,
+        project_id,
+        current_user.id,
+    )
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
@@ -52,13 +66,13 @@ def update_project(
     project_id: int,
     updates: ProjectUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    update_data = updates.model_dump(exclude_unset=True)
-
     return project_service.update_project(
         db,
         project_id,
-        update_data,
+        updates.model_dump(exclude_unset=True),
+        current_user.id,
     )
 
 
@@ -69,7 +83,12 @@ def update_project(
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    project_service.delete_project(db, project_id)
+    project_service.delete_project(
+        db,
+        project_id,
+        current_user.id,
+    )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
