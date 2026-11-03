@@ -10,7 +10,7 @@ ProjectStatus = Literal["active", "completed", "archived"]
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=3, max_length=150)
     description: str | None = None
-    owner_id: int = Field(gt=0)
+    # owner_id: int = Field(gt=0)
 
 
 class ProjectUpdate(BaseModel):
