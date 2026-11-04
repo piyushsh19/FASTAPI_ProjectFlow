@@ -6,12 +6,11 @@ from app.models import Project, ProjectMember, Task, User
 from app.repositories import task_repository
 
 
-def check_project_access(
+def get_project_membership(
     db: Session,
     project_id: int,
     user_id: int,
-) -> Project:
-
+):
     project = db.get(Project, project_id)
 
     if not project:
@@ -21,7 +20,7 @@ def check_project_access(
         )
 
     if project.owner_id == user_id:
-        return project
+        return project, "owner"
 
     membership = db.query(ProjectMember).filter(
         ProjectMember.project_id == project_id,
@@ -34,8 +33,40 @@ def check_project_access(
             detail="Project not found",
         )
 
+    return project, membership.role
+
+
+def check_project_access(
+    db: Session,
+    project_id: int,
+    user_id: int,
+) -> Project:
+    project, _ = get_project_membership(
+        db,
+        project_id,
+        user_id,
+    )
     return project
 
+
+def check_project_write_access(
+    db: Session,
+    project_id: int,
+    user_id: int,
+) -> Project:
+    project, role = get_project_membership(
+        db,
+        project_id,
+        user_id,
+    )
+
+    if role not in {"owner", "admin", "member"}:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to modify project tasks",
+        )
+
+    return project
 
 def check_task_access(
     db: Session,
@@ -98,7 +129,7 @@ def create_task(
     task_data: dict,
 ):
 
-    check_project_access(db, project_id, user_id)
+    check_project_write_access(db, project_id, user_id)
 
     validate_assignee(
         db,
@@ -147,6 +178,8 @@ def update_task(
 ):
 
     task = check_task_access(db, task_id, user_id)
+    check_project_write_access(db, task.project_id, user_id)
+
 
     if "assigned_to" in updates:
         validate_assignee(
@@ -170,6 +203,8 @@ def update_task_status(
 ):
 
     task = check_task_access(db, task_id, user_id)
+    check_project_write_access(db, task.project_id, user_id)
+    
 
     return task_repository.update_task(
         db,
@@ -186,7 +221,13 @@ def delete_task(
 
     task = check_task_access(db, task_id, user_id)
 
-    if task.project.owner_id != user_id:
+    _, role = get_project_membership(
+    db,
+    task.project_id,
+    user_id,
+)
+
+    if role not in {"owner", "admin"}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the project owner can delete tasks",
