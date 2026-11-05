@@ -1,6 +1,6 @@
-
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     Query,
     Response,
@@ -18,11 +18,10 @@ from app.schemas.task import (
     TaskResponse,
 )
 from app.services import task_service
+from app.services.websocket_manager import manager
 
 
-router = APIRouter(
-    tags=["Tasks"],
-)
+router = APIRouter(tags=["Tasks"])
 
 
 @router.post(
@@ -33,16 +32,30 @@ router = APIRouter(
 def create_task(
     project_id: int,
     task: TaskCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
-    return task_service.create_task(
+    task_record = task_service.create_task(
         db,
         project_id,
         current_user.id,
         task.model_dump(),
     )
+
+    background_tasks.add_task(
+        manager.broadcast,
+        project_id,
+        {
+            "type": "task.created",
+            "project_id": project_id,
+            "task": TaskResponse.model_validate(
+                task_record
+            ).model_dump(mode="json"),
+        },
+    )
+
+    return task_record
 
 
 @router.get(
@@ -59,7 +72,6 @@ def get_project_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     return task_service.get_project_tasks(
         db,
         project_id,
@@ -81,7 +93,6 @@ def get_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     return task_service.get_task(
         db,
         task_id,
@@ -96,16 +107,30 @@ def get_task(
 def update_task(
     task_id: int,
     updates: TaskUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
-    return task_service.update_task(
+    task_record = task_service.update_task(
         db,
         task_id,
         current_user.id,
         updates.model_dump(exclude_unset=True),
     )
+
+    background_tasks.add_task(
+        manager.broadcast,
+        task_record.project_id,
+        {
+            "type": "task.updated",
+            "project_id": task_record.project_id,
+            "task": TaskResponse.model_validate(
+                task_record
+            ).model_dump(mode="json"),
+        },
+    )
+
+    return task_record
 
 
 @router.patch(
@@ -115,16 +140,30 @@ def update_task(
 def update_task_status(
     task_id: int,
     updates: TaskStatusUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
-    return task_service.update_task_status(
+    task_record = task_service.update_task_status(
         db,
         task_id,
         current_user.id,
         updates.status,
     )
+
+    background_tasks.add_task(
+        manager.broadcast,
+        task_record.project_id,
+        {
+            "type": "task.status_updated",
+            "project_id": task_record.project_id,
+            "task": TaskResponse.model_validate(
+                task_record
+            ).model_dump(mode="json"),
+        },
+    )
+
+    return task_record
 
 
 @router.delete(
@@ -133,14 +172,35 @@ def update_task_status(
 )
 def delete_task(
     task_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Fetch task BEFORE deleting it.
+    task = task_service.get_task(
+        db,
+        task_id,
+        current_user.id,
+    )
 
+    project_id = task.project_id
+
+    # Delete task only once.
     task_service.delete_task(
         db,
         task_id,
         current_user.id,
+    )
+
+    # Broadcast deletion event.
+    background_tasks.add_task(
+        manager.broadcast,
+        project_id,
+        {
+            "type": "task.deleted",
+            "project_id": project_id,
+            "task_id": task_id,
+        },
     )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

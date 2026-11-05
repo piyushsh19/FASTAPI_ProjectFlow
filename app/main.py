@@ -7,6 +7,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as users_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.members import router as members_router
+from app.api.routes.websockets import router as websockets_router
 
 
 app = FastAPI(
@@ -30,3 +31,4 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(tasks_router)
 app.include_router(members_router)
+app.include_router(websockets_router)
