@@ -1,9 +1,11 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from sqlalchemy.orm import Session
 import jwt
 from jwt import InvalidTokenError
 
 from app.core.config import settings
-from app.db.session import SessionLocal
+from app.db.dependencies import get_db
 from app.models import Project, ProjectMember
 from app.services.websocket_manager import manager
 
@@ -11,7 +13,11 @@ from app.services.websocket_manager import manager
 router = APIRouter(tags=["WebSockets"])
 
 
-def authenticate_websocket(token: str, project_id: int):
+def authenticate_websocket(
+    token: str,
+    project_id: int,
+    db: Session,
+):
     try:
         payload = jwt.decode(
             token,
@@ -24,43 +30,45 @@ def authenticate_websocket(token: str, project_id: int):
     except (InvalidTokenError, KeyError, TypeError, ValueError):
         return None
 
-    db = SessionLocal()
+    project = db.get(Project, project_id)
 
-    try:
-        project = db.get(Project, project_id)
+    if not project:
+        return None
 
-        if not project:
-            return None
-
-        if project.owner_id == user_id:
-            return user_id
-
-        membership = db.query(ProjectMember).filter(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == user_id,
-        ).first()
-
-        if not membership:
-            return None
-
+    if project.owner_id == user_id:
         return user_id
 
-    finally:
-        db.close()
+    membership = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == user_id,
+    ).first()
+
+    if not membership:
+        return None
+
+    return user_id
 
 
 @router.websocket("/ws/projects/{project_id}")
 async def project_websocket(
     websocket: WebSocket,
     project_id: int,
+    db: Session = Depends(get_db),
 ):
     token = websocket.query_params.get("token")
 
     if not token:
-        await websocket.close(code=4401, reason="Authentication required")
+        await websocket.close(
+            code=4401,
+            reason="Authentication required",
+        )
         return
 
-    user_id = authenticate_websocket(token, project_id)
+    user_id = authenticate_websocket(
+        token=token,
+        project_id=project_id,
+        db=db,
+    )
 
     if user_id is None:
         await websocket.close(
@@ -75,7 +83,6 @@ async def project_websocket(
         while True:
             message = await websocket.receive_text()
 
-            # Simple heartbeat to keep the connection active.
             if message == "ping":
                 await websocket.send_json({"type": "pong"})
 
