@@ -18,17 +18,21 @@ def get_project(db: Session, project_id: int) -> Project | None:
     return db.get(Project, project_id)
 
 
-def get_projects(db: Session, skip: int = 0, limit: int = 20):
+def get_projects(
+    db: Session,
+    owner_id: int,
+    skip: int = 0,
+    limit: int = 20,
+):
     statement = (
         select(Project)
         .where(Project.owner_id == owner_id)
-        .order_by(Project.created_at.desc())
         .offset(skip)
         .limit(limit)
+        .order_by(Project.created_at.desc())
     )
 
-    return db.scalars(statement).all()
-
+    return list(db.scalars(statement).all())
 
 def update_project(db: Session, project: Project, updates: dict):
     for key, value in updates.items():
