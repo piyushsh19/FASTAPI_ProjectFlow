@@ -1,7 +1,11 @@
+
+# app/main.py
+
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api.routes.health import router as health_router
-from app.core.config import settings
 from app.api.routes.projects import router as projects_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as users_router
@@ -9,11 +13,30 @@ from app.api.routes.tasks import router as tasks_router
 from app.api.routes.members import router as members_router
 from app.api.routes.websockets import router as websockets_router
 
+from app.core.config import settings
+from app.db.redis import redis_client
+from app.services.websocket_manager import manager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Verify Redis is available when the application starts.
+    await redis_client.ping()
+
+    yield
+
+    # Stop project subscribers before closing Redis.
+    await manager.shutdown()
+
+    # Close the Redis connection pool.
+    await redis_client.aclose()
+
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     debug=settings.debug,
+    lifespan=lifespan,
 )
 
 

@@ -127,5 +127,20 @@ class ConnectionManager:
         for connection in disconnected:
             connections.discard(connection)
 
+    async def shutdown(self) -> None:
+        """Cancel all active Redis subscriber tasks during app shutdown."""
+
+        tasks = list(self.listener_tasks.values())
+
+        self.listener_tasks.clear()
+
+        for task in tasks:
+            task.cancel()
+
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+        self.active_connections.clear()
+
 
 manager = ConnectionManager()
