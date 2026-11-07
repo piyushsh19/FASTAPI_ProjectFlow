@@ -87,8 +87,8 @@ async def project_websocket(
                 await websocket.send_json({"type": "pong"})
 
     except WebSocketDisconnect:
-        manager.disconnect(websocket, project_id)
+        await manager.disconnect(websocket, project_id)
 
     except Exception:
-        manager.disconnect(websocket, project_id)
+        await manager.disconnect(websocket, project_id)
         raise

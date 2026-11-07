@@ -1,6 +1,7 @@
 
 # tests/api/test_websocket_events.py
 
+
 def register_and_login(client, email, name):
     client.post(
         "/auth/register",
@@ -67,7 +68,8 @@ def test_task_created_event(client):
         event = websocket.receive_json()
 
         assert event["type"] == "task.created"
-        assert event["data"]["title"] == "Create real-time feature"
+        assert event["project_id"] == project_id
+        assert event["task"]["title"] == "Create real-time feature"
 
 
 def test_task_updated_event(client):
@@ -86,6 +88,8 @@ def test_task_updated_event(client):
         },
     )
 
+    assert task_response.status_code == 201
+
     task_id = task_response.json()["id"]
 
     with client.websocket_connect(
@@ -103,7 +107,8 @@ def test_task_updated_event(client):
         event = websocket.receive_json()
 
         assert event["type"] == "task.updated"
-        assert event["data"]["title"] == "Updated title"
+        assert event["project_id"] == project_id
+        assert event["task"]["title"] == "Updated title"
 
 
 def test_task_deleted_event(client):
@@ -122,6 +127,8 @@ def test_task_deleted_event(client):
         },
     )
 
+    assert task_response.status_code == 201
+
     task_id = task_response.json()["id"]
 
     with client.websocket_connect(
@@ -138,3 +145,5 @@ def test_task_deleted_event(client):
         event = websocket.receive_json()
 
         assert event["type"] == "task.deleted"
+        assert event["project_id"] == project_id
+        assert event["task_id"] == task_id

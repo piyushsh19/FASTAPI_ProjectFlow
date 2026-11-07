@@ -18,7 +18,7 @@ from app.schemas.task import (
     TaskResponse,
 )
 from app.services import task_service
-from app.services.websocket_manager import manager
+from app.services.redis_publisher import publish_project_event
 
 
 router = APIRouter(tags=["Tasks"])
@@ -44,7 +44,7 @@ def create_task(
     )
 
     background_tasks.add_task(
-        manager.broadcast,
+        publish_project_event,
         project_id,
         {
             "type": "task.created",
@@ -119,7 +119,7 @@ def update_task(
     )
 
     background_tasks.add_task(
-        manager.broadcast,
+        publish_project_event,
         task_record.project_id,
         {
             "type": "task.updated",
@@ -152,7 +152,7 @@ def update_task_status(
     )
 
     background_tasks.add_task(
-        manager.broadcast,
+        publish_project_event,
         task_record.project_id,
         {
             "type": "task.status_updated",
@@ -194,7 +194,7 @@ def delete_task(
 
     # Broadcast deletion event.
     background_tasks.add_task(
-        manager.broadcast,
+        publish_project_event,
         project_id,
         {
             "type": "task.deleted",

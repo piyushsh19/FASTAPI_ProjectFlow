@@ -3,21 +3,21 @@
 
 import json
 
+from redis.asyncio import Redis
+
 from app.db.redis import redis_client
 
 
 async def publish_project_event(
     project_id: int,
     event: dict,
+    client: Redis | None = None,
 ) -> None:
-    """
-    Publish an event to a project-specific Redis channel.
-    """
+    redis = client or redis_client
 
     channel = f"project:{project_id}"
 
-    message = json.dumps(event)
-
-    await redis_client.publish(channel, message)
-
-    print(f"Published event to Redis channel: {channel}")
+    await redis.publish(
+        channel,
+        json.dumps(event),
+    )
