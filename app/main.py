@@ -16,6 +16,7 @@ from app.api.routes.websockets import router as websockets_router
 from app.core.config import settings
 from app.db.redis import redis_client
 from app.services.websocket_manager import manager
+from app.api.routes import notifications
 
 
 @asynccontextmanager
@@ -55,3 +56,4 @@ app.include_router(users_router)
 app.include_router(tasks_router)
 app.include_router(members_router)
 app.include_router(websockets_router)
+app.include_router(notifications.router)
