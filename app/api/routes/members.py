@@ -10,9 +10,14 @@ from app.schemas.member import (
     ProjectMemberRoleUpdate,
 )
 from app.services import member_service
+from fastapi import BackgroundTasks
+from app.models.project import Project
+from app.services.notification_dispatcher import dispatch_notification
+
 
 
 router = APIRouter(tags=["Project Members"])
+
 
 
 @router.post(
@@ -23,10 +28,12 @@ router = APIRouter(tags=["Project Members"])
 def add_project_member(
     project_id: int,
     member: ProjectMemberCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return member_service.add_project_member(
+    # Existing membership business logic and authorization.
+    member_record = member_service.add_project_member(
         db=db,
         project_id=project_id,
         owner_id=current_user.id,
@@ -34,6 +41,23 @@ def add_project_member(
         role=member.role,
     )
 
+    # Get project information for the notification.
+    project = db.get(Project, project_id)
+
+    # Notify the newly added member.
+    dispatch_notification(
+        db,
+        background_tasks,
+        user_id=member_record.user_id,
+        notification_type="member_added",
+        title="Added to a project",
+        message=f"You have been added to project: {project.name}",
+        data={
+            "project_id": project_id,
+        },
+    )
+
+    return member_record
 
 @router.get(
     "/projects/{project_id}/members",

@@ -19,7 +19,7 @@ from app.schemas.task import (
 )
 from app.services import task_service
 from app.services.redis_publisher import publish_project_event
-
+from app.services.notification_dispatcher import dispatch_notification
 
 router = APIRouter(tags=["Tasks"])
 
@@ -55,6 +55,19 @@ def create_task(
         },
     )
 
+    if task_record.assigned_to is not None:
+        dispatch_notification(
+            db,
+            background_tasks,
+            user_id=task_record.assigned_to,
+            notification_type="task_assigned",
+            title="New task assigned",
+            message=f"You have been assigned: {task_record.title}",
+            data={
+                "project_id": task_record.project_id,
+                "task_id": task_record.id,
+            },
+        )
     return task_record
 
 
@@ -100,6 +113,7 @@ def get_task(
     )
 
 
+
 @router.patch(
     "/tasks/{task_id}",
     response_model=TaskResponse,
@@ -111,6 +125,15 @@ def update_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Capture the existing assignee before updating.
+    existing_task = task_service.get_task(
+        db,
+        task_id,
+        current_user.id,
+    )
+
+    previous_assignee_id = existing_task.assigned_to
+
     task_record = task_service.update_task(
         db,
         task_id,
@@ -118,6 +141,7 @@ def update_task(
         updates.model_dump(exclude_unset=True),
     )
 
+    # Preserve existing project-level event.
     background_tasks.add_task(
         publish_project_event,
         task_record.project_id,
@@ -129,6 +153,24 @@ def update_task(
             ).model_dump(mode="json"),
         },
     )
+
+    # Notify only when the assignee actually changes.
+    if (
+        task_record.assigned_to is not None
+        and task_record.assigned_to != previous_assignee_id
+    ):
+        dispatch_notification(
+            db,
+            background_tasks,
+            user_id=task_record.assigned_to,
+            notification_type="task_assigned",
+            title="Task assigned to you",
+            message=f"You have been assigned: {task_record.title}",
+            data={
+                "project_id": task_record.project_id,
+                "task_id": task_record.id,
+            },
+        )
 
     return task_record
 
