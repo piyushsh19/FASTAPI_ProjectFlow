@@ -19,6 +19,8 @@ from app.services.websocket_manager import manager
 from app.api.routes import notifications
 from app.api.routes import notification_websockets
 import logging
+from app.core.logging_config import setup_logging
+from app.core.middleware import request_logging_middleware
 
 from app.services.notification_websocket_manager import (
     notification_manager,
@@ -34,6 +36,8 @@ from app.core.exception_handlers import (
     unhandled_exception_handler,
 )
 logger = logging.getLogger(__name__)
+logger.info("Redis connection established")
+logger.exception("Database readiness check failed")
 
 
 @asynccontextmanager
@@ -58,12 +62,6 @@ async def lifespan(app: FastAPI):
 
     logger.info("Application shutdown completed")
 
-app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
-    debug=settings.debug,
-    lifespan=lifespan,
-)
 
 app = FastAPI(
     title=settings.app_name,
@@ -99,6 +97,11 @@ def root():
         "message": "Welcome to ProjectFlow API",
         "version": settings.app_version,
     }
+setup_logging(
+    debug=settings.debug,
+    log_level=settings.log_level,
+)
+app.middleware("http")(request_logging_middleware)
 
 
 app.include_router(health_router)
