@@ -18,26 +18,78 @@ from app.db.redis import redis_client
 from app.services.websocket_manager import manager
 from app.api.routes import notifications
 from app.api.routes import notification_websockets
+import logging
+
+from app.services.notification_websocket_manager import (
+    notification_manager,
+)
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.core.exceptions import AppException
+from app.core.exception_handlers import (
+    app_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+    unhandled_exception_handler,
+)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Verify Redis is available when the application starts.
-    await redis_client.ping()
+    # Redis availability is reported by /health/ready.
+    # Do not prevent the API from starting if Redis is unavailable.
+    try:
+        await redis_client.ping()
+        logger.info("Redis connection established")
+    except Exception:
+        logger.exception(
+            "Redis is unavailable during application startup"
+        )
 
     yield
 
-    # Stop project subscribers before closing Redis.
+    # Stop both WebSocket managers before closing Redis.
     await manager.shutdown()
+    await notification_manager.shutdown()
 
-    # Close the Redis connection pool.
     await redis_client.aclose()
 
+    logger.info("Application shutdown completed")
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     debug=settings.debug,
     lifespan=lifespan,
+)
+
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    debug=settings.debug,
+    lifespan=lifespan,
+)
+
+app.add_exception_handler(
+    AppException,
+    app_exception_handler,
+)
+
+app.add_exception_handler(
+    StarletteHTTPException,
+    http_exception_handler,
+)
+
+app.add_exception_handler(
+    RequestValidationError,
+    validation_exception_handler,
+)
+
+app.add_exception_handler(
+    Exception,
+    unhandled_exception_handler,
 )
 
 
