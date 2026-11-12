@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.db.base import Base
 from app.db.dependencies import get_db
 from app.main import app
+import redis
+
 
 
 # Safety check: never run tests against the development database.
@@ -68,3 +70,32 @@ def client(db_session):
         yield test_client
 
     app.dependency_overrides.clear()
+
+@pytest.fixture(autouse=True)
+def clean_rate_limit_counters():
+    """
+    Clean Redis rate-limit counters before and after
+    every test to prevent test interference.
+    """
+
+    sync_redis = redis.Redis.from_url(
+        settings.redis_url,
+        decode_responses=True,
+    )
+
+    def clear_counters():
+        keys = list(
+            sync_redis.scan_iter(
+                match="rate_limit:auth:*"
+            )
+        )
+
+        if keys:
+            sync_redis.delete(*keys)
+
+    clear_counters()
+
+    yield
+
+    clear_counters()
+    sync_redis.close()

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from app.core.rate_limiter import rate_limit
 from app.db.dependencies import get_db
 from app.schemas.user import UserCreate, UserResponse
 from app.services import auth_service
@@ -16,6 +17,15 @@ router = APIRouter(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(
+            rate_limit(
+                limit=5,
+                window_seconds=60,
+                scope="auth:register",
+            )
+        )
+    ],
 )
 def register(
     user: UserCreate,
@@ -27,7 +37,18 @@ def register(
     )
 
 
-@router.post("/login")
+@router.post(
+    "/login",
+    dependencies=[
+        Depends(
+            rate_limit(
+                limit=5,
+                window_seconds=60,
+                scope="auth:login",
+            )
+        )
+    ],
+)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
