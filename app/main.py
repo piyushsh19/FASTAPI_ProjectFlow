@@ -35,10 +35,15 @@ from app.core.exception_handlers import (
     validation_exception_handler,
     unhandled_exception_handler,
 )
-logger = logging.getLogger(__name__)
-logger.info("Redis connection established")
-logger.exception("Database readiness check failed")
+from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.security_middleware import (
+    security_headers_middleware,
+)
+
+
+
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -68,6 +73,26 @@ app = FastAPI(
     version=settings.app_version,
     debug=settings.debug,
     lifespan=lifespan,
+)
+
+app.state.environment = settings.environment.lower()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    ],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+    ],
 )
 
 app.add_exception_handler(
@@ -113,3 +138,4 @@ app.include_router(members_router)
 app.include_router(websockets_router)
 app.include_router(notifications.router)
 app.include_router(notification_websockets.router)
+app.middleware("http")(security_headers_middleware)
