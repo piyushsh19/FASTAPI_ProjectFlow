@@ -10,6 +10,7 @@ from app.schemas.project import (
     ProjectResponse,
 )
 from app.services import project_service
+from app.schemas.pagination import PaginatedResponse
 
 router = APIRouter(
     prefix="/projects",
@@ -33,19 +34,28 @@ def create_project(
     return project_service.create_project(db, project_data)
 
 
-@router.get("/", response_model=list[ProjectResponse])
+
+@router.get("/", response_model=PaginatedResponse[ProjectResponse])
 def get_projects(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return project_service.get_projects(
+    result = project_service.get_projects(
         db,
         skip,
         limit,
         current_user.id,
     )
+
+    return {
+        "items": result["items"],
+        "total": result["total"],
+        "skip": skip,
+        "limit": limit,
+        "has_more": skip + len(result["items"]) < result["total"],
+    }
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)

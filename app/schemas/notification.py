@@ -25,10 +25,15 @@ class NotificationResponse(NotificationBase):
     created_at: datetime
 
 
+
 class NotificationListResponse(BaseModel):
     notifications: list[NotificationResponse]
     total: int
     unread_count: int
+    skip: int = Field(ge=0)
+    limit: int = Field(gt=0)
+    has_more: bool
+
 
 
 class UnreadCountResponse(BaseModel):

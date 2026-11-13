@@ -16,10 +16,13 @@ from app.schemas.task import (
     TaskUpdate,
     TaskStatusUpdate,
     TaskResponse,
+    TaskStatus,
+    TaskPriority,
 )
 from app.services import task_service
 from app.services.redis_publisher import publish_project_event
 from app.services.notification_dispatcher import dispatch_notification
+from app.schemas.pagination import PaginatedResponse
 
 router = APIRouter(tags=["Tasks"])
 
@@ -71,21 +74,25 @@ def create_task(
     return task_record
 
 
+
 @router.get(
     "/projects/{project_id}/tasks",
-    response_model=list[TaskResponse],
+    response_model=PaginatedResponse[TaskResponse],
 )
 def get_project_tasks(
     project_id: int,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
-    task_status: str | None = Query(default=None, alias="status"),
-    priority: str | None = None,
-    assigned_to: int | None = None,
+    task_status: TaskStatus | None = Query(
+        default=None,
+        alias="status",
+    ),
+    priority: TaskPriority | None = None,
+    assigned_to: int | None = Query(default=None, gt=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return task_service.get_project_tasks(
+    result = task_service.get_project_tasks(
         db,
         project_id,
         current_user.id,
@@ -95,6 +102,14 @@ def get_project_tasks(
         priority=priority,
         assigned_to=assigned_to,
     )
+
+    return {
+        "items": result["items"],
+        "total": result["total"],
+        "skip": skip,
+        "limit": limit,
+        "has_more": skip + len(result["items"]) < result["total"],
+    }
 
 
 @router.get(

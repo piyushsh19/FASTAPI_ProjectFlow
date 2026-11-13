@@ -76,7 +76,6 @@ def test_get_project(client):
 
 def test_list_projects(client):
     token = register_and_login(client)
-
     headers = get_auth_headers(token)
 
     client.post(
@@ -94,18 +93,27 @@ def test_list_projects(client):
     response = client.get("/projects/", headers=headers)
 
     assert response.status_code == 200
-    assert len(response.json()) == 2
+
+    data = response.json()
+
+    assert len(data["items"]) == 2
+    assert data["total"] == 2
+    assert data["skip"] == 0
+    assert data["limit"] == 20
+    assert data["has_more"] is False
 
 
 def test_update_project(client):
     token = register_and_login(client)
-
     headers = get_auth_headers(token)
 
     create_response = client.post(
         "/projects/",
         headers=headers,
-        json={"name": "Old Project Name", "description": "Old description"},
+        json={
+            "name": "Old Project Name",
+            "description": "Old description",
+        },
     )
 
     project_id = create_response.json()["id"]
@@ -122,13 +130,15 @@ def test_update_project(client):
 
 def test_delete_project(client):
     token = register_and_login(client)
-
     headers = get_auth_headers(token)
 
     create_response = client.post(
         "/projects/",
         headers=headers,
-        json={"name": "Project To Delete", "description": "Temporary project"},
+        json={
+            "name": "Project To Delete",
+            "description": "Temporary project",
+        },
     )
 
     project_id = create_response.json()["id"]

@@ -69,6 +69,19 @@ ProjectFlow provides project and task management, JWT authentication, role-based
 - `X-Request-ID` response headers for request tracing.
 - Support for valid client-provided request IDs.
 
+### 8. API Pagination
+
+- Introduced a reusable generic `PaginatedResponse` schema using Pydantic.
+- Added pagination metadata to project and task listing endpoints:
+  - `items`
+  - `total`
+  - `skip`
+  - `limit`
+  - `has_more`
+- Added total-count queries while preserving existing project ownership and task filtering.
+- Added typed validation for task status, priority, and assignee query parameters.
+- Updated project and task API tests for paginated responses.
+
 ## Architecture
 
 ProjectFlow follows a **layered modular monolith architecture**, separating API handling, business logic, data access, and infrastructure.

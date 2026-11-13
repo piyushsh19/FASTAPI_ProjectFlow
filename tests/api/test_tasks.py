@@ -1,8 +1,8 @@
 
-# tests/api/test_tasks.py
-
 def register_and_login(client, email="owner@example.com"):
-    client.post(
+    """Register a user and return their JWT token."""
+
+    register_response = client.post(
         "/auth/register",
         json={
             "name": "Project Owner",
@@ -10,6 +10,8 @@ def register_and_login(client, email="owner@example.com"):
             "password": "TestPassword123!",
         },
     )
+
+    assert register_response.status_code == 201
 
     response = client.post(
         "/auth/login",
@@ -20,6 +22,7 @@ def register_and_login(client, email="owner@example.com"):
     )
 
     assert response.status_code == 200
+
     return response.json()["access_token"]
 
 
@@ -88,7 +91,14 @@ def test_list_project_tasks(client):
     )
 
     assert response.status_code == 200
-    assert len(response.json()) == 1
+
+    data = response.json()
+
+    assert len(data["items"]) == 1
+    assert data["total"] == 1
+    assert data["skip"] == 0
+    assert data["limit"] == 20
+    assert data["has_more"] is False
 
 
 def test_get_task(client):
