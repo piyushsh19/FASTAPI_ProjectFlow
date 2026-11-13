@@ -1,10 +1,26 @@
 
 # app/main.py
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.config import settings
+from app.core.logging_config import setup_logging
+
+# Configure logging before creating application loggers.
+setup_logging(
+    debug=settings.debug,
+    log_level=settings.log_level,
+)
+
+logger = logging.getLogger(__name__)
+
+# API routes
 from app.api.routes.health import router as health_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.auth import router as auth_router
@@ -12,22 +28,10 @@ from app.api.routes.users import router as users_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.members import router as members_router
 from app.api.routes.websockets import router as websockets_router
-
-from app.core.config import settings
-from app.db.redis import redis_client
-from app.services.websocket_manager import manager
 from app.api.routes import notifications
 from app.api.routes import notification_websockets
-import logging
-from app.core.logging_config import setup_logging
-from app.core.middleware import request_logging_middleware
 
-from app.services.notification_websocket_manager import (
-    notification_manager,
-)
-from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
-
+# Exception handling
 from app.core.exceptions import AppException
 from app.core.exception_handlers import (
     app_exception_handler,
@@ -35,23 +39,40 @@ from app.core.exception_handlers import (
     validation_exception_handler,
     unhandled_exception_handler,
 )
-from fastapi.middleware.cors import CORSMiddleware
 
+# Middleware
+from app.core.middleware import (
+    request_id_middleware,
+    request_logging_middleware,
+)
 from app.core.security_middleware import (
     security_headers_middleware,
 )
 
+# Infrastructure
+from app.db.redis import redis_client
+from app.services.websocket_manager import manager
+from app.services.notification_websocket_manager import (
+    notification_manager,
+)
 
 
-logger = logging.getLogger(__name__)
+# --------------------------------------------------
+# Application Lifespan
+# --------------------------------------------------
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Manage application startup and shutdown.
+    """
+
     # Redis availability is reported by /health/ready.
     # Do not prevent the API from starting if Redis is unavailable.
     try:
         await redis_client.ping()
         logger.info("Redis connection established")
+
     except Exception:
         logger.exception(
             "Redis is unavailable during application startup"
@@ -68,6 +89,10 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutdown completed")
 
 
+# --------------------------------------------------
+# FastAPI Application
+# --------------------------------------------------
+
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
@@ -76,6 +101,11 @@ app = FastAPI(
 )
 
 app.state.environment = settings.environment.lower()
+
+
+# --------------------------------------------------
+# CORS Configuration
+# --------------------------------------------------
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,8 +122,17 @@ app.add_middleware(
     allow_headers=[
         "Authorization",
         "Content-Type",
+        "X-Request-ID",
+    ],
+    expose_headers=[
+        "X-Request-ID",
     ],
 )
+
+
+# --------------------------------------------------
+# Exception Handlers
+# --------------------------------------------------
 
 app.add_exception_handler(
     AppException,
@@ -116,18 +155,34 @@ app.add_exception_handler(
 )
 
 
+# --------------------------------------------------
+# Root Endpoint
+# --------------------------------------------------
+
 @app.get("/", tags=["Root"])
 def root():
     return {
         "message": "Welcome to ProjectFlow API",
         "version": settings.app_version,
     }
-setup_logging(
-    debug=settings.debug,
-    log_level=settings.log_level,
-)
-app.middleware("http")(request_logging_middleware)
 
+
+# --------------------------------------------------
+# Middleware Registration
+# --------------------------------------------------
+
+# Registration order is intentional.
+# Request ID middleware wraps the other HTTP middleware
+# so the request context is available during request logging.
+
+app.middleware("http")(request_logging_middleware)
+app.middleware("http")(security_headers_middleware)
+app.middleware("http")(request_id_middleware)
+
+
+# --------------------------------------------------
+# API Router Registration
+# --------------------------------------------------
 
 app.include_router(health_router)
 app.include_router(projects_router)
@@ -138,4 +193,3 @@ app.include_router(members_router)
 app.include_router(websockets_router)
 app.include_router(notifications.router)
 app.include_router(notification_websockets.router)
-app.middleware("http")(security_headers_middleware)

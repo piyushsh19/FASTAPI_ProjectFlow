@@ -63,6 +63,12 @@ ProjectFlow provides project and task management, JWT authentication, role-based
 - HTTP security headers.
 - Redis-backed rate limiting for authentication endpoints.
 
+### 7.Request ID and correlation ID tracing
+- Request ID generation and propagation using UUIDs.
+- Context-aware logging with Python ContextVars.
+- `X-Request-ID` response headers for request tracing.
+- Support for valid client-provided request IDs.
+
 ## Architecture
 
 ProjectFlow follows a **layered modular monolith architecture**, separating API handling, business logic, data access, and infrastructure.
@@ -200,7 +206,7 @@ The test suite uses a dedicated PostgreSQL test database. Ensure `TEST_DATABASE_
 - [x] Structured logging
 - [x] CORS and security headers
 - [x] Redis-backed authentication rate limiting
-- [ ] Request ID and correlation ID tracing
+- [x] Request ID and correlation ID tracing
 - [ ] Remaining production hardening
 - [ ] React frontend integration
 
