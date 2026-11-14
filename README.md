@@ -82,6 +82,15 @@ ProjectFlow provides project and task management, JWT authentication, role-based
 - Added typed validation for task status, priority, and assignee query parameters.
 - Updated project and task API tests for paginated responses.
 
+### Pagination and Filtering
+
+- Introduced a reusable generic `PaginatedResponse` schema.
+- Standardized pagination metadata across Projects, Tasks, and Notifications.
+- Added `skip`, `limit`, `total`, and `has_more` fields to paginated responses.
+- Added task filtering by status, priority, and assignee.
+- Preserved project ownership and task access-control checks.
+- Added pagination and filtering test coverage.
+
 ## Architecture
 
 ProjectFlow follows a **layered modular monolith architecture**, separating API handling, business logic, data access, and infrastructure.

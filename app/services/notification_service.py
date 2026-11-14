@@ -33,6 +33,7 @@ def get_user_notifications(
     skip: int = 0,
     limit: int = 20,
 ) -> NotificationListResponse:
+
     notifications = repository.get_user_notifications(
         db=db,
         user_id=user_id,
@@ -57,8 +58,10 @@ def get_user_notifications(
         ],
         total=total,
         unread_count=unread_count,
+        skip=skip,
+        limit=limit,
+        has_more=skip + len(notifications) < total,
     )
-
 
 def get_unread_count(
     db: Session,

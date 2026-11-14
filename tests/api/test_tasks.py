@@ -40,21 +40,25 @@ def create_project(client, token):
     return response.json()["id"]
 
 
-def create_task(client, token, project_id):
+def create_task(
+    client,
+    token,
+    project_id,
+    title="Build authentication",
+    priority="high",
+):
     response = client.post(
         f"/projects/{project_id}/tasks",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=auth_headers(token),
         json={
-            "title": "Build authentication",
-            "description": "Implement JWT authentication",
-            "status": "todo",
-            "priority": "high",
+            "title": title,
+            "description": "Task created for testing",
+            "priority": priority,
         },
     )
 
     assert response.status_code == 201
     return response.json()["id"]
-
 
 def auth_headers(token):
     return {"Authorization": f"Bearer {token}"}
@@ -163,3 +167,128 @@ def test_delete_task(client):
     )
 
     assert get_response.status_code == 404
+
+def test_list_project_tasks_pagination(client):
+    token = register_and_login(client)
+    project_id = create_project(client, token)
+
+    for index in range(3):
+        create_task(
+            client,
+            token,
+            project_id,
+            title=f"Pagination Task {index}",
+        )
+
+    response = client.get(
+        f"/projects/{project_id}/tasks?skip=0&limit=2",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data["items"]) == 2
+    assert data["total"] == 3
+    assert data["skip"] == 0
+    assert data["limit"] == 2
+    assert data["has_more"] is True
+
+    response = client.get(
+        f"/projects/{project_id}/tasks?skip=2&limit=2",
+        headers=auth_headers(token),
+    )
+
+    data = response.json()
+
+    assert len(data["items"]) == 1
+    assert data["total"] == 3
+    assert data["has_more"] is False
+
+
+def test_filter_project_tasks_by_priority(client):
+    token = register_and_login(client)
+    project_id = create_project(client, token)
+
+    create_task(
+        client,
+        token,
+        project_id,
+        title="High Priority Task",
+        priority="high",
+    )
+
+    create_task(
+        client,
+        token,
+        project_id,
+        title="Low Priority Task",
+        priority="low",
+    )
+
+    response = client.get(
+        f"/projects/{project_id}/tasks?priority=high",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["priority"] == "high"
+    assert data["items"][0]["title"] == "High Priority Task"
+
+def test_filter_project_tasks_by_status(client):
+    token = register_and_login(client)
+    project_id = create_project(client, token)
+
+    task_id = create_task(
+        client,
+        token,
+        project_id,
+        title="Completed Task",
+    )
+
+    update_response = client.patch(
+        f"/tasks/{task_id}/status",
+        headers=auth_headers(token),
+        json={"status": "done"},
+    )
+
+    assert update_response.status_code == 200
+
+    create_task(
+        client,
+        token,
+        project_id,
+        title="Pending Task",
+    )
+
+    response = client.get(
+        f"/projects/{project_id}/tasks?status=done",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["status"] == "done"
+    assert data["items"][0]["title"] == "Completed Task"
+
+
+def test_filter_project_tasks_rejects_invalid_status(client):
+    token = register_and_login(client)
+    project_id = create_project(client, token)
+
+    response = client.get(
+        f"/projects/{project_id}/tasks?status=invalid_status",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 422
