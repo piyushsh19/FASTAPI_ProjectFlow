@@ -1,16 +1,20 @@
+
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
 from app.db.dependencies import get_db
 from app.models import User
+from app.schemas.pagination import PaginatedResponse
 from app.schemas.project import (
     ProjectCreate,
     ProjectUpdate,
     ProjectResponse,
 )
 from app.services import project_service
-from app.schemas.pagination import PaginatedResponse
+
 
 router = APIRouter(
     prefix="/projects",
@@ -34,19 +38,27 @@ def create_project(
     return project_service.create_project(db, project_data)
 
 
-
-@router.get("/", response_model=PaginatedResponse[ProjectResponse])
+@router.get(
+    "/",
+    response_model=PaginatedResponse[ProjectResponse],
+)
 def get_projects(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
+    sort_by: Literal["created_at", "updated_at", "name"] = Query(
+        default="created_at"
+    ),
+    order: Literal["asc", "desc"] = Query(default="desc"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     result = project_service.get_projects(
-        db,
-        skip,
-        limit,
-        current_user.id,
+        db=db,
+        skip=skip,
+        limit=limit,
+        user_id=current_user.id,
+        sort_by=sort_by,
+        order=order,
     )
 
     return {

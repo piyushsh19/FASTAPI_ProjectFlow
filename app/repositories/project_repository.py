@@ -24,7 +24,25 @@ def get_projects(
     owner_id: int,
     skip: int = 0,
     limit: int = 20,
+    sort_by: str = "created_at",
+    order: str = "desc",
 ):
+    sort_columns = {
+        "created_at": Project.created_at,
+        "updated_at": Project.updated_at,
+        "name": Project.name,
+    }
+
+    sort_column = sort_columns.get(sort_by)
+
+    if sort_column is None:
+        raise ValueError(f"Unsupported project sort field: {sort_by}")
+
+    if order == "asc":
+        sort_expression = sort_column.asc()
+    else:
+        sort_expression = sort_column.desc()
+
     base_statement = select(Project).where(
         Project.owner_id == owner_id
     )
@@ -37,7 +55,7 @@ def get_projects(
 
     statement = (
         base_statement
-        .order_by(Project.created_at.desc())
+        .order_by(sort_expression, Project.id.asc())
         .offset(skip)
         .limit(limit)
     )

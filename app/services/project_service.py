@@ -1,3 +1,4 @@
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -38,12 +39,16 @@ def get_projects(
     skip: int,
     limit: int,
     user_id: int,
+    sort_by: str = "created_at",
+    order: str = "desc",
 ):
     return project_repository.get_projects(
-        db,
+        db=db,
         owner_id=user_id,
         skip=skip,
         limit=limit,
+        sort_by=sort_by,
+        order=order,
     )
 
 

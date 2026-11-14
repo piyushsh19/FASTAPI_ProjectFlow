@@ -82,7 +82,7 @@ ProjectFlow provides project and task management, JWT authentication, role-based
 - Added typed validation for task status, priority, and assignee query parameters.
 - Updated project and task API tests for paginated responses.
 
-### Pagination and Filtering
+### 9. Pagination and Filtering
 
 - Introduced a reusable generic `PaginatedResponse` schema.
 - Standardized pagination metadata across Projects, Tasks, and Notifications.
@@ -90,6 +90,16 @@ ProjectFlow provides project and task management, JWT authentication, role-based
 - Added task filtering by status, priority, and assignee.
 - Preserved project ownership and task access-control checks.
 - Added pagination and filtering test coverage.
+
+### 10. API Sorting
+
+- Added configurable sorting to the project listing endpoint.
+- Supported fields: `created_at`, `updated_at`, and `name`.
+- Supports ascending (`asc`) and descending (`desc`) order.
+- Added sorting field validation using allowed values.
+- Implemented database-level sorting using SQLAlchemy.
+- Added a secondary ID sort for consistent pagination.
+- Preserved project ownership filtering and pagination metadata.
 
 ## Architecture
 
