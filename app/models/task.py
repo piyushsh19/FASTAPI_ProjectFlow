@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import (
     DateTime,
     ForeignKey,
+    Index,
     String,
     Text,
     func,
@@ -44,11 +45,9 @@ class Task(Base):
     )
 
     project_id: Mapped[int] = mapped_column(
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
+    ForeignKey("projects.id", ondelete="CASCADE"),
+    nullable=False,
+)
     assigned_to: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -75,3 +74,10 @@ class Task(Base):
     )
 
     assignee: Mapped["User | None"] = relationship()
+    __table_args__ = (
+    Index("ix_tasks_project_created_at", "project_id", "created_at"),
+    Index("ix_tasks_project_status", "project_id", "status"),
+    Index("ix_tasks_project_priority", "project_id", "priority"),
+    Index("ix_tasks_project_assigned_to", "project_id", "assigned_to"),
+    Index("ix_tasks_assigned_to", "assigned_to"),
+)

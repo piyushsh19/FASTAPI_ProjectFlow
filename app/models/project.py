@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
@@ -10,7 +10,6 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-
     name: Mapped[str] = mapped_column(
         String(150),
         nullable=False,
@@ -57,3 +56,10 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    __table_args__ = (
+    Index(
+        "ix_projects_owner_created_at",
+        "owner_id",
+        "created_at",
+    ),
+)

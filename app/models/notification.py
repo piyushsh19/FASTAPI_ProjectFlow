@@ -6,6 +6,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Index,
     JSON,
     String,
     Text,
@@ -24,10 +25,9 @@ class Notification(Base):
     )
 
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
+    ForeignKey("users.id", ondelete="CASCADE"),
+    nullable=False,
+)
 
     type: Mapped[str] = mapped_column(
         String(50),
@@ -60,3 +60,8 @@ class Notification(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+    __table_args__ = (
+    Index("ix_notifications_user_created_at", "user_id", "created_at"),
+    Index("ix_notifications_user_is_read", "user_id", "is_read"),
+)
