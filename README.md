@@ -132,6 +132,20 @@ ProjectFlow provides project and task management, JWT authentication, role-based
 - Managed schema changes through reversible Alembic migrations.
 - Verified database schema consistency using `alembic check`.
 
+
+## 14 Configuration and Environment Management
+
+- Centralized application configuration using Pydantic Settings.
+- Added environment validation for development, testing, and production.
+- Added production safeguards for debug mode and JWT secret strength.
+- Validated logging levels and CORS origins.
+- Added `.env.example` as a safe environment configuration template.
+- Added `requirements.txt` with pinned dependency versions.
+- Externalized PostgreSQL Docker credentials using environment variables.
+- Kept application secrets out of version control.
+- Added automated configuration validation tests.
+
+
 ## Architecture
 
 ProjectFlow follows a **layered modular monolith architecture**, separating API handling, business logic, data access, and infrastructure.
