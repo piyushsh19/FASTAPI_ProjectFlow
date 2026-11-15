@@ -1,6 +1,8 @@
+
 from datetime import datetime
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -17,15 +19,24 @@ class ProjectMember(Base):
     __tablename__ = "project_members"
 
     __table_args__ = (
-    UniqueConstraint(
-        "project_id",
-        "user_id",
-        name="uq_project_member",
-    ),
-    Index("ix_project_members_user_id", "user_id"),
+        UniqueConstraint(
+            "project_id",
+            "user_id",
+            name="uq_project_member",
+        ),
+        CheckConstraint(
+            "role IN ('admin', 'member', 'viewer')",
+            name="ck_project_members_role",
+        ),
+        Index(
+            "ix_project_members_user_id",
+            "user_id",
+        ),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+    )
 
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
@@ -49,7 +60,7 @@ class ProjectMember(Base):
     )
 
     project: Mapped["Project"] = relationship(
-        back_populates="members"
+        back_populates="members",
     )
 
     user: Mapped["User"] = relationship()

@@ -111,6 +111,27 @@ ProjectFlow provides project and task management, JWT authentication, role-based
 - Maintained project membership checks and pagination metadata.
 - Added deterministic secondary sorting by task ID for consistent pagination.
 
+### 12. Database Indexing
+
+- Added composite indexes for frequently queried project, task, and notification data.
+- Optimized project listing by owner and creation date.
+- Optimized task listing and filtering by project, status, priority, and assignee.
+- Optimized notification listing and unread notification queries.
+- Added indexes for foreign-key lookup operations.
+- Removed redundant standalone indexes replaced by composite indexes.
+- Managed all schema changes through reversible Alembic migrations.
+
+### 13 Database Constraints and Referential Integrity
+
+- Added PostgreSQL CHECK constraints for project statuses.
+- Added CHECK constraints for task statuses and priorities.
+- Added CHECK constraints for project member roles.
+- Enforced valid values at the database level.
+- Preserved existing foreign key relationships and deletion rules.
+- Maintained unique project membership constraints.
+- Managed schema changes through reversible Alembic migrations.
+- Verified database schema consistency using `alembic check`.
+
 ## Architecture
 
 ProjectFlow follows a **layered modular monolith architecture**, separating API handling, business logic, data access, and infrastructure.
