@@ -101,6 +101,16 @@ ProjectFlow provides project and task management, JWT authentication, role-based
 - Added a secondary ID sort for consistent pagination.
 - Preserved project ownership filtering and pagination metadata.
 
+### 11. Task API Sorting
+
+- Added configurable sorting to the project tasks listing endpoint.
+- Supported fields: `created_at`, `updated_at`, `title`, `priority`, and `due_date`.
+- Supports ascending (`asc`) and descending (`desc`) order.
+- Added query parameter validation using `Literal` types.
+- Preserved existing status, priority, and assignee filters.
+- Maintained project membership checks and pagination metadata.
+- Added deterministic secondary sorting by task ID for consistent pagination.
+
 ## Architecture
 
 ProjectFlow follows a **layered modular monolith architecture**, separating API handling, business logic, data access, and infrastructure.

@@ -20,6 +20,7 @@ def get_task(db: Session, task_id: int) -> Task | None:
 
 
 
+
 def get_project_tasks(
     db: Session,
     project_id: int,
@@ -28,7 +29,28 @@ def get_project_tasks(
     task_status: str | None = None,
     priority: str | None = None,
     assigned_to: int | None = None,
+    sort_by: str = "created_at",
+    order: str = "desc",
 ):
+    # Allow only explicitly approved sorting columns.
+    sort_columns = {
+        "created_at": Task.created_at,
+        "updated_at": Task.updated_at,
+        "title": Task.title,
+        "priority": Task.priority,
+        "due_date": Task.due_date,
+    }
+
+    sort_column = sort_columns.get(sort_by)
+
+    if sort_column is None:
+        raise ValueError(f"Unsupported task sort field: {sort_by}")
+
+    if order == "asc":
+        sort_expression = sort_column.asc()
+    else:
+        sort_expression = sort_column.desc()
+
     # Base query: tasks belonging to the requested project.
     base_statement = select(Task).where(
         Task.project_id == project_id
@@ -55,10 +77,10 @@ def get_project_tasks(
         select(func.count()).select_from(base_statement.subquery())
     ) or 0
 
-    # Fetch the requested page.
+    # Apply sorting and pagination.
     statement = (
         base_statement
-        .order_by(Task.created_at.desc())
+        .order_by(sort_expression, Task.id.asc())
         .offset(skip)
         .limit(limit)
     )

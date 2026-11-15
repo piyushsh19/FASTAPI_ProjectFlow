@@ -23,6 +23,7 @@ from app.services import task_service
 from app.services.redis_publisher import publish_project_event
 from app.services.notification_dispatcher import dispatch_notification
 from app.schemas.pagination import PaginatedResponse
+from typing import Literal
 
 router = APIRouter(tags=["Tasks"])
 
@@ -75,6 +76,7 @@ def create_task(
 
 
 
+
 @router.get(
     "/projects/{project_id}/tasks",
     response_model=PaginatedResponse[TaskResponse],
@@ -89,6 +91,14 @@ def get_project_tasks(
     ),
     priority: TaskPriority | None = None,
     assigned_to: int | None = Query(default=None, gt=0),
+    sort_by: Literal[
+        "created_at",
+        "updated_at",
+        "title",
+        "priority",
+        "due_date",
+    ] = Query(default="created_at"),
+    order: Literal["asc", "desc"] = Query(default="desc"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -101,6 +111,8 @@ def get_project_tasks(
         task_status=task_status,
         priority=priority,
         assigned_to=assigned_to,
+        sort_by=sort_by,
+        order=order,
     )
 
     return {
