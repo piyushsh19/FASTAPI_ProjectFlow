@@ -271,3 +271,81 @@ def test_list_projects_only_returns_owned_projects(client):
     assert data["total"] == 1
     assert len(data["items"]) == 1
     assert data["items"][0]["name"] == "Private Owner Project"    
+
+
+def test_list_projects_sort_by_name_ascending(client):
+    token = register_and_login(client)
+    headers = get_auth_headers(token)
+
+    for name in ["Zebra Project", "Alpha Project", "Middle Project"]:
+        response = client.post(
+            "/projects/",
+            headers=headers,
+            json={"name": name, "description": "Sorting test"},
+        )
+        assert response.status_code == 201
+
+    response = client.get(
+        "/projects/?sort_by=name&order=asc",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    names = [project["name"] for project in response.json()["items"]]
+
+    assert names == [
+        "Alpha Project",
+        "Middle Project",
+        "Zebra Project",
+    ]
+
+
+def test_list_projects_sort_by_name_descending(client):
+    token = register_and_login(client)
+    headers = get_auth_headers(token)
+
+    for name in ["Alpha Project", "Zebra Project", "Middle Project"]:
+        client.post(
+            "/projects/",
+            headers=headers,
+            json={"name": name, "description": "Sorting test"},
+        )
+
+    response = client.get(
+        "/projects/?sort_by=name&order=desc",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    names = [project["name"] for project in response.json()["items"]]
+
+    assert names == [
+        "Zebra Project",
+        "Middle Project",
+        "Alpha Project",
+    ]
+
+
+def test_list_projects_rejects_invalid_sort_field(client):
+    token = register_and_login(client)
+
+    response = client.get(
+        "/projects/?sort_by=invalid",
+        headers=get_auth_headers(token),
+    )
+
+    assert response.status_code == 422
+
+
+def test_list_projects_rejects_invalid_sort_order(client):
+    token = register_and_login(client)
+
+    response = client.get(
+        "/projects/?order=random",
+        headers=get_auth_headers(token),
+    )
+
+    assert response.status_code == 422
+

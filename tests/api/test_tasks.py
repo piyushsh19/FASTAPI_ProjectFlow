@@ -292,3 +292,103 @@ def test_filter_project_tasks_rejects_invalid_status(client):
     )
 
     assert response.status_code == 422
+
+
+
+def test_list_project_tasks_sort_by_title_ascending(client):
+    token = register_and_login(client)
+    project_id = create_project(client, token)
+
+    create_task(client, token, project_id, title="Zebra Task")
+    create_task(client, token, project_id, title="Alpha Task")
+    create_task(client, token, project_id, title="Middle Task")
+
+    response = client.get(
+        f"/projects/{project_id}/tasks?sort_by=title&order=asc",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+
+    titles = [task["title"] for task in response.json()["items"]]
+
+    assert titles == [
+        "Alpha Task",
+        "Middle Task",
+        "Zebra Task",
+    ]
+
+
+def test_list_project_tasks_sort_by_title_descending(client):
+    token = register_and_login(client)
+    project_id = create_project(client, token)
+
+    create_task(client, token, project_id, title="Alpha Task")
+    create_task(client, token, project_id, title="Zebra Task")
+    create_task(client, token, project_id, title="Middle Task")
+
+    response = client.get(
+        f"/projects/{project_id}/tasks?sort_by=title&order=desc",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+
+    titles = [task["title"] for task in response.json()["items"]]
+
+    assert titles == [
+        "Zebra Task",
+        "Middle Task",
+        "Alpha Task",
+    ]
+
+
+def test_list_project_tasks_sorting_with_pagination(client):
+    token = register_and_login(client)
+    project_id = create_project(client, token)
+
+    for title in ["Charlie Task", "Alpha Task", "Bravo Task"]:
+        create_task(client, token, project_id, title=title)
+
+    response = client.get(
+        f"/projects/{project_id}/tasks"
+        "?sort_by=title&order=asc&skip=0&limit=2",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert [task["title"] for task in data["items"]] == [
+        "Alpha Task",
+        "Bravo Task",
+    ]
+    assert data["total"] == 3
+    assert data["skip"] == 0
+    assert data["limit"] == 2
+    assert data["has_more"] is True
+
+
+def test_list_project_tasks_rejects_invalid_sort_field(client):
+    token = register_and_login(client)
+    project_id = create_project(client, token)
+
+    response = client.get(
+        f"/projects/{project_id}/tasks?sort_by=invalid",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 422
+
+
+def test_list_project_tasks_rejects_invalid_sort_order(client):
+    token = register_and_login(client)
+    project_id = create_project(client, token)
+
+    response = client.get(
+        f"/projects/{project_id}/tasks?order=random",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 422
