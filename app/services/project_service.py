@@ -4,6 +4,10 @@ from sqlalchemy.orm import Session
 
 from app.models import User, Project
 from app.repositories import project_repository
+from app.services.project_access import (
+    get_project_and_role,
+    require_project_role,
+)
 
 
 def create_project(db: Session, project_data: dict) -> Project:
@@ -23,14 +27,11 @@ def get_project(
     project_id: int,
     user_id: int,
 ) -> Project:
-    project = project_repository.get_project(db, project_id)
-
-    if not project or project.owner_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
-
+    project, _ = get_project_and_role(
+        db,
+        project_id,
+        user_id,
+    )
     return project
 
 
@@ -58,7 +59,12 @@ def update_project(
     updates: dict,
     user_id: int,
 ):
-    project = get_project(db, project_id, user_id)
+    project = require_project_role(
+        db,
+        project_id,
+        user_id,
+        {"owner", "admin"},
+    )
 
     return project_repository.update_project(
         db,
@@ -72,6 +78,16 @@ def delete_project(
     project_id: int,
     user_id: int,
 ):
-    project = get_project(db, project_id, user_id)
+    project, role = get_project_and_role(
+        db,
+        project_id,
+        user_id,
+    )
+
+    if role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the project owner can delete the project",
+        )
 
     project_repository.delete_project(db, project)

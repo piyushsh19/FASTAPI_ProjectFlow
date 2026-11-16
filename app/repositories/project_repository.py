@@ -1,8 +1,8 @@
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import Project
+from app.models import Project, ProjectMember
 
 
 def create_project(db: Session, project_data: dict) -> Project:
@@ -38,13 +38,17 @@ def get_projects(
     if sort_column is None:
         raise ValueError(f"Unsupported project sort field: {sort_by}")
 
-    if order == "asc":
-        sort_expression = sort_column.asc()
-    else:
-        sort_expression = sort_column.desc()
+    sort_expression = (
+        sort_column.asc() if order == "asc" else sort_column.desc()
+    )
 
     base_statement = select(Project).where(
-        Project.owner_id == owner_id
+        or_(
+            Project.owner_id == owner_id,
+            Project.members.any(
+                ProjectMember.user_id == owner_id
+            ),
+        )
     )
 
     total = db.scalar(
