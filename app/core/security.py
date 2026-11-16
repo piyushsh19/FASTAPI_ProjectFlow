@@ -10,9 +10,20 @@ from app.core.config import settings
 password_hash = PasswordHash.recommended()
 
 
+
 # --------------------------------------------------
 # Password Security
 # --------------------------------------------------
+
+password_hash = PasswordHash.recommended()
+
+# Used when an email address does not exist.
+# This allows login failures to perform a password-hash
+# verification instead of immediately returning.
+DUMMY_PASSWORD_HASH = password_hash.hash(
+    "projectflow-dummy-password-not-for-authentication"
+)
+
 
 def hash_password(password: str) -> str:
     return password_hash.hash(password)

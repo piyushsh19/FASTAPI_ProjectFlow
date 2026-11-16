@@ -1,8 +1,10 @@
+
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import (
+    DUMMY_PASSWORD_HASH,
     hash_password,
     verify_password,
     create_access_token,
@@ -43,10 +45,21 @@ def authenticate_user(
         select(User).where(User.email == email)
     )
 
-    if not user or not verify_password(
-        password,
-        user.password_hash,
-    ):
+    # Apply a fixed upper bound to login input.
+    # Avoid passing arbitrarily large passwords to Argon2.
+    if user is None or len(password) > 128:
+        verify_password(
+            "projectflow-dummy-login-password",
+            DUMMY_PASSWORD_HASH,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
