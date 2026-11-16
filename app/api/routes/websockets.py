@@ -1,10 +1,8 @@
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
-import jwt
-from jwt import InvalidTokenError
 
-from app.core.config import settings
+from app.core.security import decode_access_token
 from app.db.dependencies import get_db
 from app.models import Project, ProjectMember
 from app.services.websocket_manager import manager
@@ -19,15 +17,9 @@ def authenticate_websocket(
     db: Session,
 ):
     try:
-        payload = jwt.decode(
-            token,
-            settings.secret_key,
-            algorithms=[settings.algorithm],
-        )
+        user_id = decode_access_token(token)
 
-        user_id = int(payload["sub"])
-
-    except (InvalidTokenError, KeyError, TypeError, ValueError):
+    except Exception:
         return None
 
     project = db.get(Project, project_id)

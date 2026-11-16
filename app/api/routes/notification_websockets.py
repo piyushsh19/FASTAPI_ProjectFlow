@@ -1,10 +1,8 @@
 
-import jwt
-
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
+from app.core.security import decode_access_token
 from app.db.dependencies import get_db
 from app.models.user import User
 from app.services.notification_websocket_manager import (
@@ -22,28 +20,16 @@ async def notification_websocket(
     db: Session = Depends(get_db),
 ):
     try:
-        payload = jwt.decode(
-            token,
-            settings.secret_key,
-            algorithms=[settings.algorithm],
-        )
+        user_id = decode_access_token(token)
 
-        subject = payload.get("sub")
-
-        if subject is None:
-            await websocket.close(code=4401)
-            return
-
-        user_id = int(subject)
-
-        user = db.get(User, user_id)
-
-        if user is None:
-            await websocket.close(code=4403)
-            return
-
-    except (jwt.InvalidTokenError, ValueError, TypeError):
+    except Exception:
         await websocket.close(code=4401)
+        return
+
+    user = db.get(User, user_id)
+
+    if user is None:
+        await websocket.close(code=4403)
         return
 
     await notification_manager.connect(websocket, user_id)

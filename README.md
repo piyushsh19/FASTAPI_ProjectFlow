@@ -146,6 +146,19 @@ ProjectFlow provides project and task management, JWT authentication, role-based
 - Added automated configuration validation tests.
 
 
+### 15. JWT Authentication Hardening
+
+- Centralized JWT creation and validation in the security module.
+- Enforced required JWT claims (`sub` and `exp`).
+- Validated JWT signatures and expiration timestamps.
+- Rejected malformed tokens and invalid user identifiers.
+- Rejected tokens associated with nonexistent users.
+- Unified JWT validation across HTTP and WebSocket authentication.
+- Preserved project membership and notification authorization checks.
+- Added automated tests for expired, malformed, incomplete, and tampered tokens.
+
+
+
 ## Architecture
 
 ProjectFlow follows a **layered modular monolith architecture**, separating API handling, business logic, data access, and infrastructure.
