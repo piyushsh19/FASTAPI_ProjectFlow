@@ -1,4 +1,5 @@
 
+import jwt
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
@@ -21,15 +22,20 @@ async def notification_websocket(
 ):
     try:
         user_id = decode_access_token(token)
-
-    except Exception:
-        await websocket.close(code=4401)
+    except jwt.InvalidTokenError:
+        await websocket.close(
+            code=4401,
+            reason="Invalid authentication token",
+        )
         return
 
     user = db.get(User, user_id)
 
     if user is None:
-        await websocket.close(code=4403)
+        await websocket.close(
+            code=4403,
+            reason="User not found",
+        )
         return
 
     await notification_manager.connect(websocket, user_id)
@@ -38,9 +44,10 @@ async def notification_websocket(
         while True:
             message = await websocket.receive_text()
 
+            # Notification WebSocket is read-only.
             if message == "ping":
                 await websocket.send_json({
-                    "type": "pong"
+                    "type": "pong",
                 })
 
     except WebSocketDisconnect:

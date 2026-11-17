@@ -1,5 +1,6 @@
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+import jwt
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
@@ -15,16 +16,15 @@ def authenticate_websocket(
     token: str,
     project_id: int,
     db: Session,
-):
+) -> int | None:
     try:
         user_id = decode_access_token(token)
-
-    except Exception:
+    except jwt.InvalidTokenError:
         return None
 
     project = db.get(Project, project_id)
 
-    if not project:
+    if project is None:
         return None
 
     if project.owner_id == user_id:
@@ -35,7 +35,7 @@ def authenticate_websocket(
         ProjectMember.user_id == user_id,
     ).first()
 
-    if not membership:
+    if membership is None:
         return None
 
     return user_id
@@ -75,6 +75,7 @@ async def project_websocket(
         while True:
             message = await websocket.receive_text()
 
+            # Project WebSocket is read-only.
             if message == "ping":
                 await websocket.send_json({"type": "pong"})
 
