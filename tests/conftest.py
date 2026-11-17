@@ -23,7 +23,6 @@ test_engine = create_engine(
     pool_pre_ping=True,
 )
 
-
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
     """Create tables once for the entire test session."""

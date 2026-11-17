@@ -86,3 +86,16 @@ def test_production_configuration_is_valid():
 
     assert settings.environment == "production"
     assert settings.debug is False
+
+
+def test_production_configuration_does_not_require_test_database():
+    settings = get_valid_settings(
+        test_database_url=None,
+        environment="production",
+        debug=False,
+        secret_key="a" * 40,
+        cors_origins="https://projectflow.example.com",
+    )
+
+    assert settings.environment == "production"
+    assert settings.test_database_url is None
