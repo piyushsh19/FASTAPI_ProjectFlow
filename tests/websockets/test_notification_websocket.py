@@ -129,3 +129,16 @@ def test_notification_websocket_receives_redis_event(
 
     finally:
         redis_test_client.close()
+
+def test_notification_websocket_rejects_nonexistent_user(client):
+    from app.core.security import create_access_token
+
+    token = create_access_token(999999999)
+
+    with pytest.raises(WebSocketDisconnect) as exc:
+        with client.websocket_connect(
+            f"/ws/notifications?token={token}"
+        ):
+            pass
+
+    assert exc.value.code == 4403
