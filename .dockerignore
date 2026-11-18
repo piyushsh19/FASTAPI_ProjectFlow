@@ -1,0 +1,41 @@
+
+# Git
+.git
+.gitignore
+
+# Python environments
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# IDE and editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+
+# Documentation
+README.md
+
+# Local database files
+*.db
+*.sqlite3

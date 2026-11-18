@@ -367,6 +367,133 @@ http://localhost:8000
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
+
+## Running with Docker
+
+ProjectFlow can run as a complete Docker Compose application with three services:
+
+- **API:** FastAPI application running on port `8000`.
+- **PostgreSQL:** Database running on port `5433` on the host.
+- **Redis:** Cache and messaging service running on port `6379` on the host.
+
+### Prerequisites
+
+- Docker Desktop
+- Docker Compose
+
+### 1. Configure environment variables
+
+Create your `.env` file:
+
+```bash
+cp .env.example .env
+```
+
+Configure the required environment variables:
+
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DB`
+- `DATABASE_URL_DOCKER`
+- `SECRET_KEY`
+- `DATABASE_URL`
+- `TEST_DATABASE_URL`
+
+Use the Docker service name `postgres` in `DATABASE_URL_DOCKER`:
+
+```env
+DATABASE_URL_DOCKER=postgresql+psycopg://projectflow_user:your_password@postgres:5432/projectflow_db
+```
+
+Ensure the password in the database URL matches `POSTGRES_PASSWORD`. URL-encode special characters in the URL password.
+
+Never commit `.env` or production secrets.
+
+### 2. Build and start services
+
+Build the API image:
+
+```bash
+docker compose build api
+```
+
+Start PostgreSQL and Redis:
+
+```bash
+docker compose up -d postgres redis
+```
+
+Start the API:
+
+```bash
+docker compose up -d api
+```
+
+Alternatively, start all services together:
+
+```bash
+docker compose up -d --build
+```
+
+### 3. Run database migrations
+
+Apply Alembic migrations:
+
+```bash
+docker compose run --rm api alembic upgrade head
+```
+
+### 4. Verify service health
+
+Check container status:
+
+```bash
+docker compose ps
+```
+
+Check API readiness:
+
+```bash
+curl http://localhost:8000/health/ready
+```
+
+The readiness endpoint verifies PostgreSQL and Redis connectivity.
+
+### 5. Access API documentation
+
+- API: http://localhost:8000
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+### 6. View application logs
+
+```bash
+docker compose logs -f api
+```
+
+View all service logs:
+
+```bash
+docker compose logs -f
+```
+
+### 7. Stop services
+
+Stop containers without deleting persistent database data:
+
+```bash
+docker compose down
+```
+
+Start them again:
+
+```bash
+docker compose up -d
+```
+
+**Important:** Avoid `docker compose down -v` unless you intentionally want to delete the persistent PostgreSQL and Redis volumes.
+
+
 ## Running Tests
 
 Ensure PostgreSQL and Redis are running and `TEST_DATABASE_URL` points to the dedicated test database.
@@ -422,16 +549,25 @@ pytest -q tests/api/test_rbac.py
 - [x] Password security and validation
 - [x] Project and member RBAC authorization
 
-### Phase 11: Remaining Production Readiness
 
-- [ ] Task-level authorization audit
-- [ ] WebSocket authorization audit
-- [ ] Additional RBAC regression tests
-- [ ] Production Docker setup
+### Phase 11: Production Readiness
+
+- [x] Task-level authorization audit
+- [x] WebSocket authorization audit
+- [x] RBAC regression tests
+- [x] Production Docker setup
+- [x] Multi-stage Docker build
+- [x] Non-root API container
+- [x] Production and development dependency separation
+- [x] Docker Compose integration for PostgreSQL, Redis, and FastAPI
+- [x] Container health checks
+- [x] Database readiness verification
+- [x] Docker restart and database persistence verification
 - [ ] Logging and observability review
 - [ ] Integration testing
 - [ ] OpenAPI documentation review
 - [ ] Final production-readiness review
+
 
 ### Upcoming
 
